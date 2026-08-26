@@ -5,24 +5,38 @@ class ContatoPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    
+    final List<Map<String, dynamic>> contatos = [
+
+      {'inicial' : 'AS', 'nome' : 'Ana Souza', 'cor' : Colors.blueAccent, 'telefone' : '(11) 98765-4321', 'favorito' : 'true'},
+      {'inicial' : 'BL', 'nome' : 'Bruno Lima', 'cor' :  Colors.blueGrey, 'telefone' : '(11) 31232-2312', 'favorito' : 'false'},
+      {'inicial' : 'CM', 'nome' : 'Carla Mendes', 'cor' : Colors.amber, 'telefone' : '(21) 97654-3210', 'favorito' : 'true'},
+      {'inicial' : 'An', 'nome' : 'Diego Alves', 'cor' : Colors.lightGreen, 'telefone' : '(11) 988888-1234', 'favorito' : 'false'},
+      {'inicial' : 'ET', 'nome' : 'Elisa Torres', 'cor' : Colors.deepPurpleAccent, 'telefone' : '(17) 99999-5678', 'favorito' : 'false'},    
+    ];
+
     return Scaffold(
       appBar: AppBar(
         title: Text("Meus Contatos"),
         centerTitle: true,
       ),
 
-      body: ListView(
+      body: ListView.builder(
         padding: EdgeInsets.all(12),
-        children: [
+        itemCount: contatos.length,
+        itemBuilder: (context, index) {
 
-          Card(
+          final contato = contatos[index];
+          final bool favorito = contato['favorito'].toString().toLowerCase() == 'true';
+
+          return Card(
             margin: EdgeInsets.symmetric(vertical: 6),
             child: ListTile(
               leading: CircleAvatar(
                 radius: 50,
-                backgroundColor: Colors.blueAccent,
+                backgroundColor: contato['cor'],
                 child: Text(
-                  "AS",
+                  contato['inicial'],
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
@@ -32,106 +46,14 @@ class ContatoPage extends StatelessWidget {
                   ),
                 ),
               ),
-              title: Text('Ana Souza'),
-              subtitle: Text("(11) 98765-4321"),
+              title: Text(
+                contato['nome']),
+              subtitle: Text(contato['telefone']),
               trailing: Icon(Icons.star,),
-              iconColor: Colors.amber,
+              iconColor: favorito ? Colors.amber : Colors.grey,
             ),
-          ),
-
-              Card(
-            margin: EdgeInsets.symmetric(vertical: 6),
-            child: ListTile(
-              leading: CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.blueGrey,
-                child: Text(
-                  "BL",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    height: 1.0,
-                     color: Colors.white
-                  ),
-                ),
-              ),
-              title: Text('Bruno Lima'),
-              subtitle: Text("(11) 31232-2312"),
-              trailing: Icon(Icons.star),
-            ),
-          ),
-
-              Card(
-            margin: EdgeInsets.symmetric(vertical: 6),
-            child: ListTile(
-              leading: CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.amber,
-                child: Text(
-                  "CM",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    height: 1.0,
-                     color: Colors.white
-                  ),
-                ),
-              ),
-              title: Text('Carla Mendes'),
-              subtitle: Text("(21) 97654-3210"),
-              trailing: Icon(Icons.star),
-              iconColor: Colors.amber,
-            ),
-          ),
-
-              Card(
-            margin: EdgeInsets.symmetric(vertical: 6),
-            child: ListTile(
-              leading: CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.lightGreen,
-                child: Text(
-                  "An",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    height: 1.0,
-                     color: Colors.white
-                  ),
-                ),
-              ),
-              title: Text('Diego Alves'),
-              subtitle: Text("(11) 988888-1234"),
-              trailing: Icon(Icons.star),
-            ),
-          ),
-
-             Card(
-            margin: EdgeInsets.symmetric(vertical: 6),
-            child: ListTile(
-              leading: CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.deepPurpleAccent,
-                child: Text(
-                  "ET",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    height: 1.0,
-                    color: Colors.white
-                  ),
-                ),
-              ),
-              title: Text('Elisa Torres'),
-              subtitle: Text("(17) 99999-5678"),
-              trailing: Icon(Icons.star),
-            ),
-          ),
-        ],
+          );
+        }           
       ),
       floatingActionButton: FloatingActionButton(onPressed: () {},
       backgroundColor: Colors.orangeAccent,
