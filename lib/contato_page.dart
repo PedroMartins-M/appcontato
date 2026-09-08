@@ -1,65 +1,159 @@
 import 'package:flutter/material.dart';
+import 'database_helper.dart';
 
-class ContatoPage extends StatelessWidget {
+class ContatoPage extends StatefulWidget {
   const ContatoPage({super.key});
 
   @override
+  State<ContatoPage> createState() => _ContatoPageState();
+}
+
+class _ContatoPageState extends State<ContatoPage> {
+  List<Map<String, dynamic>> contatos = [];
+
+  @override
+  void initState() {
+    super.initState();
+    carregarContatos(); // Carrega os dados ao abrir a tela
+  }
+
+  // Busca os contatos do Banco de Dados
+  Future<void> carregarContatos() async {
+    final dados = await DatabaseHelper.obterContatos();
+    setState(() {
+      contatos = dados;
+    });
+  }
+
+  // Marcar/Desmarcar Favorito no Banco
+  Future<void> marcarFavorito(int id, bool favoritoAtual) async {
+    await DatabaseHelper.alternarFavorito(id, !favoritoAtual);
+    await carregarContatos();
+  }
+
+  void excluirContato(int index) async{
+    final contato = contatos[index];
+
+    await DatabaseHelper.excluirContato(contato['id']);
+
+    carregarContatos();
+
+  }
+
+  // Adicionar Contato com SQFlite
+  void adicionarContato() {
+    final adicionarNome = TextEditingController();
+    final adicionarTelefone = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Novo Contato'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: adicionarNome,
+                decoration: const InputDecoration(hintText: "Nome do contato..."),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: adicionarTelefone,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(hintText: "Telefone..."),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                // Fecha o diálogo com segurança ao cancelar
+                Navigator.pop(context);
+              },
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () async {
+                final nome = adicionarNome.text.trim();
+                final telefone = adicionarTelefone.text.trim();
+
+                if (nome.isNotEmpty) {
+                  await DatabaseHelper.inserirContato({
+                    'nome': nome,
+                    'telefone': telefone.isNotEmpty ? telefone : 'Sem telefone',
+                    'favorito': 0,
+                  });
+
+                  await carregarContatos();
+
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
+                }
+              },
+              child: const Text('Adicionar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    
-    final List<Map<String, dynamic>> contatos = [
-
-      {'inicial' : 'AS', 'nome' : 'Ana Souza', 'cor' : Colors.blueAccent, 'telefone' : '(11) 98765-4321', 'favorito' : 'true'},
-      {'inicial' : 'BL', 'nome' : 'Bruno Lima', 'cor' :  Colors.blueGrey, 'telefone' : '(11) 31232-2312', 'favorito' : 'false'},
-      {'inicial' : 'CM', 'nome' : 'Carla Mendes', 'cor' : Colors.amber, 'telefone' : '(21) 97654-3210', 'favorito' : 'true'},
-      {'inicial' : 'An', 'nome' : 'Diego Alves', 'cor' : Colors.lightGreen, 'telefone' : '(11) 988888-1234', 'favorito' : 'false'},
-      {'inicial' : 'ET', 'nome' : 'Elisa Torres', 'cor' : Colors.deepPurpleAccent, 'telefone' : '(17) 99999-5678', 'favorito' : 'false'},    
-    ];
-
     return Scaffold(
       appBar: AppBar(
-        title: Text("Meus Contatos"),
+        title: const Text("Meus Contatos"),
         centerTitle: true,
       ),
-
-      body: ListView.builder(
-        padding: EdgeInsets.all(12),
-        itemCount: contatos.length,
-        itemBuilder: (context, index) {
-
-          final contato = contatos[index];
-          final bool favorito = contato['favorito'].toString().toLowerCase() == 'true';
-
-          return Card(
-            margin: EdgeInsets.symmetric(vertical: 6),
-            child: ListTile(
-              leading: CircleAvatar(
-                radius: 50,
-                backgroundColor: contato['cor'],
-                child: Text(
-                  contato['inicial'],
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    height: 1.0,
-                     color: Colors.white
-                  ),
-                ),
+      body: contatos.isEmpty
+          ? const Center(
+              child: Text(
+                'Nenhum contato encontrado',
+                style: TextStyle(fontSize: 18, color: Colors.grey),
               ),
-              title: Text(
-                contato['nome']),
-              subtitle: Text(contato['telefone']),
-              trailing: Icon(Icons.star,),
-              iconColor: favorito ? Colors.amber : Colors.grey,
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: contatos.length,
+              itemBuilder: (context, index) {
+                final contato = contatos[index];
+                final bool favorito = contato['favorito'] == 1;
+                final String nome = contato['nome'] ?? '';
+                final String inicial = nome.length >= 2 
+                    ? nome.substring(0, 2).toUpperCase() 
+                    : nome.toUpperCase();
+
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      radius: 22,
+                      backgroundColor: Colors.blueAccent,
+                      child: Text(
+                        inicial,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    title: Text(nome),
+                    subtitle: Text(contato['telefone'] ?? ''),
+                    trailing: IconButton(
+                      onPressed: () => marcarFavorito(contato['id'], favorito),
+                      icon: Icon(
+                        Icons.star,
+                        color: favorito ? Colors.amber : Colors.grey,
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
-          );
-        }           
-      ),
-      floatingActionButton: FloatingActionButton(onPressed: () {},
-      backgroundColor: Colors.orangeAccent,
-      foregroundColor: Colors.black, 
-        shape: const CircleBorder(),
-      child: Icon(Icons.add ),   
+      floatingActionButton: FloatingActionButton(
+        onPressed: adicionarContato,
+        backgroundColor: Colors.orangeAccent,
+        foregroundColor: Colors.black,
+        child: const Icon(Icons.add),
       ),
     );
   }
