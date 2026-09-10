@@ -12,6 +12,8 @@ class ContatoPage extends StatefulWidget {
 class _ContatoPageState extends State<ContatoPage> {
   List<Map<String, dynamic>> contatos = [];
 
+  String? filtroAtual;
+
   @override
   void initState() {
     super.initState();
@@ -20,7 +22,7 @@ class _ContatoPageState extends State<ContatoPage> {
 
   // Busca os contatos do Banco de Dados
   Future<void> carregarContatos() async {
-    final dados = await DatabaseHelper.obterContatos();
+    final dados = await DatabaseHelper.obterContatos(filtro: filtroAtual);
     setState(() {
       contatos = dados;
     });
@@ -30,6 +32,12 @@ class _ContatoPageState extends State<ContatoPage> {
   Future<void> marcarFavorito(int id, bool favoritoAtual) async {
     await DatabaseHelper.alternarFavorito(id, !favoritoAtual);
     await carregarContatos();
+  }
+
+  void aplicarFiltro(String? novoFiltro) {
+    filtroAtual = novoFiltro;
+    Navigator.pop(context);
+    carregarContatos();
   }
 
   void excluirContato(int index) async {
@@ -123,12 +131,29 @@ class _ContatoPageState extends State<ContatoPage> {
             ListTile(
               leading: Icon(Icons.list),
               title: Text("Todos os seus contatos"),
-              onTap: () {},
+              selectedColor: Colors.blue[700],
+              onTap: () => aplicarFiltro(null),
             ),
 
-             ListTile(
+            ListTile(
+              leading: Icon(Icons.pending_actions),
+              title: Text('favoritos'),
+              selected: filtroAtual == 'favoritos',
+              selectedColor: Colors.blue[700],
+              onTap: () => aplicarFiltro('favoritos'),
+            ),
+
+            ListTile(
+              leading: Icon(Icons.pending_actions),
+              title: Text('normais'),
+              selected: filtroAtual == 'normais',
+              selectedColor: Colors.blue[700],
+              onTap: () => aplicarFiltro('normais'),
+            ),
+
+               ListTile(
               leading: Icon(Icons.info_outline),
-              title: Text("Todos os seus contatos"),
+              title: Text("Sobre o Aplicativo"),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (_) => SobrePage() ));

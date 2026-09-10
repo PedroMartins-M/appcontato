@@ -35,9 +35,29 @@ class DatabaseHelper {
   }
 
   // Listar contatos
-  static Future<List<Map<String, dynamic>>> obterContatos() async {
+  static Future<List<Map<String, dynamic>>> obterContatos({
+    String? filtro,
+  }) async {
     final db = await database;
-    return await db.query('contatos', orderBy: 'nome ASC');
+
+    if (filtro == 'favoritos') {
+      // Retorna apenas contatos favoritados (favorito = 1)
+      return db.query(
+        'contatos',
+        where: 'favorito = ?',
+        whereArgs: [1],
+        orderBy: 'nome ASC',
+      );
+    } else if (filtro == 'normais') {
+      // Retorna apenas contatos não favoritados (favorito = 0)
+      return db.query(
+        'contatos',
+        where: 'favorito = ?',
+        whereArgs: [0],
+        orderBy: 'nome ASC',
+      );
+    }
+    return db.query('contatos', orderBy: 'nome ASC');
   }
 
   // Alternar Favorito (0 = false, 1 = true)
