@@ -11,16 +11,22 @@ class ContatoPage extends StatefulWidget {
 
 class _ContatoPageState extends State<ContatoPage> {
   List<Map<String, dynamic>> contatos = [];
-
   String? filtroAtual;
+
+  // Lista de Categorias
+  static const List<String> categorias = [
+    'Pessoal',
+    'Trabalho',
+    'Família',
+    'Outros'
+  ];
 
   @override
   void initState() {
     super.initState();
-    carregarContatos(); // Carrega os dados ao abrir a tela
+    carregarContatos();
   }
 
-  // Busca os contatos do Banco de Dados
   Future<void> carregarContatos() async {
     final dados = await DatabaseHelper.obterContatos(filtro: filtroAtual);
     setState(() {
@@ -28,7 +34,6 @@ class _ContatoPageState extends State<ContatoPage> {
     });
   }
 
-  // Marcar/Desmarcar Favorito no Banco
   Future<void> marcarFavorito(int id, bool favoritoAtual) async {
     await DatabaseHelper.alternarFavorito(id, !favoritoAtual);
     await carregarContatos();
@@ -40,71 +45,88 @@ class _ContatoPageState extends State<ContatoPage> {
     carregarContatos();
   }
 
-  void excluirContato(int index) async {
-    final contato = contatos[index];
-
-    await DatabaseHelper.excluirContato(contato['id']);
-
-    carregarContatos();
-  }
-
-  // Adicionar Contato com SQFlite
+  // 1. DIÁLOGO COM DROPDOWN DE CATEGORIA
   void adicionarContato() {
     final adicionarNome = TextEditingController();
     final adicionarTelefone = TextEditingController();
+    String categoriaSelecionada = categorias.first;
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Novo Contato'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: adicionarNome,
-                decoration: const InputDecoration(
-                  hintText: "Nome do contato...",
+        return StatefulBuilder(
+          builder: (context, setStateModal) {
+            return AlertDialog(
+              title: const Text('Novo Contato'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: adicionarNome,
+                      decoration: const InputDecoration(
+                        hintText: "Nome do contato...",
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: adicionarTelefone,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(hintText: "Telefone..."),
+                    ),
+                    const SizedBox(height: 10),
+                    // Dropdown de Categoria
+                    DropdownButtonFormField<String>(
+                      value: categoriaSelecionada,
+                      decoration: const InputDecoration(
+                        labelText: 'Categoria',
+                      ),
+                      items: categorias.map((String cat) {
+                        return DropdownMenuItem<String>(
+                          value: cat,
+                          child: Text(cat),
+                        );
+                      }).toList(),
+                      onChanged: (novoValor) {
+                        if (novoValor != null) {
+                          setStateModal(() {
+                            categoriaSelecionada = novoValor;
+                          });
+                        }
+                      },
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: adicionarTelefone,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(hintText: "Telefone..."),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                // Fecha o diálogo com segurança ao cancelar
-                Navigator.pop(context);
-              },
-              child: const Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () async {
-                final nome = adicionarNome.text.trim();
-                final telefone = adicionarTelefone.text.trim();
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    final nome = adicionarNome.text.trim();
+                    final telefone = adicionarTelefone.text.trim();
 
-                if (nome.isNotEmpty) {
-                  await DatabaseHelper.inserirContato({
-                    'nome': nome,
-                    'telefone': telefone.isNotEmpty ? telefone : 'Sem telefone',
-                    'favorito': 0,
-                  });
+                    if (nome.isNotEmpty) {
+                      await DatabaseHelper.inserirContato(
+                        nome,
+                        telefone.isNotEmpty ? telefone : 'Sem telefone',
+                        categoriaSelecionada,
+                      );
 
-                  await carregarContatos();
+                      await carregarContatos();
 
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                  }
-                }
-              },
-              child: const Text('Adicionar'),
-            ),
-          ],
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                      }
+                    }
+                  },
+                  child: const Text('Adicionar'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -121,42 +143,43 @@ class _ContatoPageState extends State<ContatoPage> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            DrawerHeader(
+            const DrawerHeader(
               decoration: BoxDecoration(color: Colors.indigo),
               child: Text(
                 "Meus Contatos",
-                style: TextStyle(color: Colors.indigo, fontSize: 22),
+                style: TextStyle(color: Colors.white, fontSize: 22),
               ),
             ),
             ListTile(
-              leading: Icon(Icons.list),
-              title: Text("Todos os seus contatos"),
+              leading: const Icon(Icons.list),
+              title: const Text("Todos os seus contatos"),
+              selected: filtroAtual == null,
               selectedColor: Colors.blue[700],
               onTap: () => aplicarFiltro(null),
             ),
-
             ListTile(
-              leading: Icon(Icons.pending_actions),
-              title: Text('favoritos'),
+              leading: const Icon(Icons.star),
+              title: const Text('Favoritos'),
               selected: filtroAtual == 'favoritos',
               selectedColor: Colors.blue[700],
               onTap: () => aplicarFiltro('favoritos'),
             ),
-
             ListTile(
-              leading: Icon(Icons.pending_actions),
-              title: Text('normais'),
+              leading: const Icon(Icons.star_border),
+              title: const Text('Normais'),
               selected: filtroAtual == 'normais',
               selectedColor: Colors.blue[700],
               onTap: () => aplicarFiltro('normais'),
             ),
-
-               ListTile(
-              leading: Icon(Icons.info_outline),
-              title: Text("Sobre o Aplicativo"),
+            ListTile(
+              leading: const Icon(Icons.info_outline),
+              title: const Text("Sobre o Aplicativo"),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => SobrePage() ));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SobrePage()),
+                );
               },
             ),
           ],
@@ -176,18 +199,16 @@ class _ContatoPageState extends State<ContatoPage> {
                 final contato = contatos[index];
                 final bool favorito = contato['favorito'] == 1;
                 final String nome = contato['nome'] ?? '';
+                final String telefone = contato['telefone'] ?? '';
+                final String categoria = contato['categoria'] ?? 'Geral';
+
                 final String inicial = nome.length >= 2
                     ? nome.substring(0, 2).toUpperCase()
                     : nome.toUpperCase();
 
                 return Dismissible(
-                  // Chave única para identificar o item sendo removido
                   key: Key(contato['id'].toString()),
-
-                  // Direção do deslize (da direita para a esquerda)
                   direction: DismissDirection.endToStart,
-
-                  // Fundo vermelho exibido ao arrastar
                   background: Container(
                     alignment: Alignment.centerRight,
                     padding: const EdgeInsets.only(right: 20),
@@ -201,27 +222,20 @@ class _ContatoPageState extends State<ContatoPage> {
                       color: Colors.white,
                     ),
                   ),
-
-                  // Ação disparada quando o usuário conclui o movimento de deslizar
                   onDismissed: (direction) async {
                     final id = contato['id'];
-
-                    // Remove do Banco de Dados
                     await DatabaseHelper.excluirContato(id);
 
-                    // Atualiza a lista na memória para sincronizar com o banco
                     setState(() {
                       contatos.removeAt(index);
                     });
 
-                    // Exibe mensagem com opção de confirmação visual
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('$nome removido com sucesso')),
                       );
                     }
                   },
-
                   child: Card(
                     margin: const EdgeInsets.symmetric(vertical: 6),
                     child: ListTile(
@@ -237,7 +251,38 @@ class _ContatoPageState extends State<ContatoPage> {
                         ),
                       ),
                       title: Text(nome),
-                      subtitle: Text(contato['telefone'] ?? ''),
+                      // 2. EXIBIÇÃO DO TELEFONE E DA CATEGORIA LADO A LADO
+                      subtitle: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              telefone,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.blueGrey.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.blueGrey.shade100,
+                              ),
+                            ),
+                            child: Text(
+                              categoria,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.blueGrey.shade800,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                       trailing: IconButton(
                         onPressed: () =>
                             marcarFavorito(contato['id'], favorito),

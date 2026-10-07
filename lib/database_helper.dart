@@ -14,24 +14,35 @@ class DatabaseHelper {
     final path = join(await getDatabasesPath(), 'contatos.db');
     return await openDatabase(
       path,
-      version: 1,
+      version: 2, // Aumentado para 2 para executar o onUpgrade se necessário
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE contatos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT,
             telefone TEXT,
-            favorito INTEGER
+            favorito INTEGER,
+            categoria TEXT
           )
         ''');
+      },
+      onUpgrade: (db, versaoAntiga, versaoNova) {
+        if (versaoAntiga < 2) {
+          db.execute('ALTER TABLE contatos ADD COLUMN categoria TEXT');
+        }
       },
     );
   }
 
-  // Inserir contato
-  static Future<int> inserirContato(Map<String, dynamic> contato) async {
-    final db = await database;
-    return await db.insert('contatos', contato);
+  // Inserir contato incluindo a CATEGORIA
+  static Future<void> inserirContato(String nome, String telefone, String categoria) async {
+    final db = await DatabaseHelper.database;
+    await db.insert('contatos', {
+      'nome': nome,
+      'telefone': telefone,
+      'favorito': 0, // 0 = Falso, 1 = Verdadeiro
+      'categoria': categoria,
+    });
   }
 
   // Listar contatos
@@ -41,7 +52,6 @@ class DatabaseHelper {
     final db = await database;
 
     if (filtro == 'favoritos') {
-      // Retorna apenas contatos favoritados (favorito = 1)
       return db.query(
         'contatos',
         where: 'favorito = ?',
@@ -49,7 +59,6 @@ class DatabaseHelper {
         orderBy: 'nome ASC',
       );
     } else if (filtro == 'normais') {
-      // Retorna apenas contatos não favoritados (favorito = 0)
       return db.query(
         'contatos',
         where: 'favorito = ?',
@@ -60,7 +69,7 @@ class DatabaseHelper {
     return db.query('contatos', orderBy: 'nome ASC');
   }
 
-  // Alternar Favorito (0 = false, 1 = true)
+  // Alternar Favorito
   static Future<int> alternarFavorito(int id, bool novoStatus) async {
     final db = await database;
     return await db.update(
@@ -71,6 +80,7 @@ class DatabaseHelper {
     );
   }
 
+  // Excluir contato
   static Future<void> excluirContato(int id) async {
     final db = await DatabaseHelper.database;
     await db.delete(
